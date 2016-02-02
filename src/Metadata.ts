@@ -43,10 +43,17 @@ export interface ITypeInfo {
     type: string;
     isArray: boolean;
     isCustomType: boolean;
-    isProxyUtil?: boolean;
 }
 
 export interface IEndpointGroup {
     name: string;
     endpoints: IEndpoint[];
+}
+
+export function createTypeInfo(type: string, isArray: boolean = false, isCustomType: boolean = false): ITypeInfo {
+    return {
+      type,
+      isArray,
+      isCustomType  
+    };
 }

@@ -10,12 +10,11 @@ gulp.task("default", function () {
 	return tsProject.src()
 		.pipe(ts(tsProject))
         .pipe(babel({ presets: ["es2015"], plugins: ['transform-runtime'] }))
-		.pipe(rename("index.js"))
-        .pipe(gulp.dest("./"));
+        .pipe(gulp.dest("./bin"));
 });
 
 gulp.task("run", ["default"], function(cb) {
-    exec("node ./index.js", function(err, stdout, stderr) {
+    exec("node ./bin/Index.js", function(err, stdout, stderr) {
         if(err) {
             console.error(stderr);
         }

@@ -77,7 +77,7 @@ namespace Emitter {
 
         const needsQueryBuilder = ((params: IParameter[]) => params.some(p => p.in === "query"))(proxyMethod.parameters);
         const needsBodyBuilder = ((params: IParameter[]) => params.some(p => p.in === "body"))(proxyMethod.parameters);
-        const needsRequestBuilder = (params: IParameter[]) => needsQueryBuilder || needsBodyBuilder;
+        const needsRequestBuilder = needsQueryBuilder || needsBodyBuilder;
         const getQueryParams = (params: IParameter[]) => {
             const queryParams = params.filter(p => p.in === "query");
             return `{ ${queryParams.map(p => p.name).join(", ")} }`;
@@ -109,7 +109,7 @@ namespace Emitter {
                     }`),
             ], level + 1),
             $block([
-                $str(`return api.${mapMethod(proxyMethod.method, returnType)}(${["options", needsRequestBuilder(proxyMethod.parameters) && "buildRequest"].filter(a => !!a).join(", ")});`)
+                $str(`return api.${mapMethod(proxyMethod.method, returnType)}(${["options", needsRequestBuilder && "buildRequest"].filter(a => !!a).join(", ")});`)
             ], level + 1),
             $str(`}`)
         ], level);

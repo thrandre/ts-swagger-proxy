@@ -4,60 +4,29 @@ import * as Request from "superagent";
 import * as FS from "fs";
 import * as Path from "path";
 
-import { ApiFactoryTypeInfo, ApiTypeInfo, ConfigureRequestTypeInfo, HttpOptionsTypeInfo, HttpRequestTypeInfo, HttpResponseTypeInfo } from "./Builtins";
+import { 
+    ApiFactoryTypeInfo, 
+    ApiTypeInfo, 
+    ConfigureRequestTypeInfo, 
+    HttpOptionsTypeInfo, 
+    HttpRequestTypeInfo, 
+    HttpResponseTypeInfo,
+    ProxyUtils
+} from "./Builtins";
+
 import { groupBy, mapMany, unique, resolveJsonRef } from "./Utils";
-import { IEndpointGroup, IEndpoint, IModel, IMethod, IParameter, ITypeInfo } from "./Metadata";
+import { IEndpointGroup, IEndpoint, IModel, IMethod, IParameter, ITypeInfo, createTypeInfo } from "./Metadata";
 import { default as Emitter, expandTypeInfo, newline, tab } from "./Emitter";
+
+import { ensureDirectoriesExists, removeDirectory } from "./FsUtils";
+
 import SwaggerParser from "./Swagger";
 
 interface IManifest {
     url: string;
     out: string;
+    flush: boolean;
 }
-
-function removeDirectory(path: string) {
-    if (FS.existsSync(path)) {
-        FS.readdirSync(path).forEach((file, index) => {
-            var curPath = path + "/" + file;
-            if (FS.lstatSync(curPath).isDirectory()) { // recurse
-                removeDirectory(curPath);
-            } else { // delete file
-                FS.unlinkSync(curPath);
-            }
-        });
-        FS.rmdirSync(path);
-    }
-};
-
-function ensureDirectoryExists(path: string, cb: (err: Error) => void) {
-    FS.mkdir(path, (err) => {
-        if (!err) {
-            return cb(err);
-        }
-
-        if (err) {
-            return err.code == "EEXIST" ?
-                cb(null) :
-                cb(err);
-        }
-
-        return cb(null);
-    });
-}
-
-const manifestPath = Path.resolve(process.cwd(), "ts-swagger-proxy.json");
-const manifest: IManifest = JSON.parse(FS.readFileSync(manifestPath, "utf-8"));
-const outDir = Path.resolve(Path.dirname(manifestPath), manifest.out);
-
-const modelDir = Path.resolve(outDir, "./models");
-const proxyDir = Path.resolve(outDir, "./proxies");
-
-console.log(outDir);
-
-removeDirectory(outDir);
-ensureDirectoryExists(outDir, console.log);
-ensureDirectoryExists(modelDir, console.log);
-ensureDirectoryExists(proxyDir, console.log);
 
 class ModuleEmitter {
 
@@ -85,95 +54,109 @@ const emitter = new ModuleEmitter((name, data) => {
 
 });
 
-function resolveDependencies(types: ITypeInfo[], resolve: (type: ITypeInfo) => string) {
-    return groupBy(unique(types.filter(t => t.isCustomType), t => t.type), t => resolve(t));
+const getModelDirectory = (basepath: string) => Path.resolve(basepath, "./models");
+const getProxyDirectory = (basepath: string) => Path.resolve(basepath, "./proxies");
+
+function init(workingDirectory: string) {
+    const manifestPath = Path.resolve(workingDirectory, "ts-swagger-proxy.json");
+    const manifest: IManifest = JSON.parse(FS.readFileSync(manifestPath, "utf-8"));
+
+    const outDir = Path.resolve(Path.dirname(manifestPath), manifest.out);
+    
+    if(manifest.flush) {
+       removeDirectory(outDir); 
+    }
+    
+    ensureDirectoriesExists(outDir, getModelDirectory(outDir), getProxyDirectory(outDir));
+    generateProxy(manifest.url, outDir);
 }
 
-function resolveModule(type: ITypeInfo): string {
-    if (type.isProxyUtil) {
-        return `./proxyUtils.ts`;
-    }
-
-    return `./models/${type.type}`;
+interface IModule {
+    name: string;
+    path: string;
+    exports: ITypeInfo[];
+    imports: ITypeInfo[];
 }
 
-Request.get("http://localhost:55037/swagger/docs/v1", (err, res) => {
-    if (err) {
-        console.error(err);
-    }
+function resolveModuleDependencies(mod: IModule, resolve: (type: ITypeInfo) => IModule) {
+    const deps = groupBy(mod.imports, i => resolve(i).path);
+    return Object
+        .keys(deps)
+        .reduce((prev, next) => {
+            const relativePath = (
+                (Path.relative(Path.dirname(mod.path), Path.dirname(next)) || ".") + Path.sep +
+                Path.basename(next, ".ts")
+            )
+            .replace(/\\/g, "/");
+            
+            prev[relativePath] = deps[next].map(d => d.type)
+            return prev;
+        }, {});
+}
 
-    const result = parser.parse(res.body);
-    const modules = result.models;
+function generateProxy(url: string, outDir: string) {
+    Request.get(url, (err, res) => {
+        if (err) {
+            console.error(err);
+        }
 
-    const endpointGroups = groupEndpoints(result.endpoints);
-
-    const bsEnd = endpointGroups[3];
-    const bsMeths = mapMany(bsEnd.endpoints, e => e.methods);
-    const bsParams = mapMany(bsMeths, m => m.parameters).map(p => p.type);
-    const bsRets = mapMany(bsMeths, r => r.responses).map(r => r.type);
-    const bsDeps = resolveDependencies(
-        bsParams
-            .concat(bsRets)
+        const result = parser.parse(res.body);
+        const models = result.models;
+        const endpointGroups = groupEndpoints(result.endpoints);
+        
+        const modules = models
+            .map<IModule>(m => ({
+                name: m.name,
+                path: Path.resolve(getModelDirectory(outDir), `${ m.name }.ts`),
+                exports: [ { type: m.name, isArray: false, isCustomType: false, isProxyUtil: false } ],
+                imports: unique(m.properties.map(p => p.type).filter(t => t.isCustomType), t => t.type)
+            }))
+            .concat(
+                endpointGroups.map<IModule>(g => ({
+                    name: g.name,
+                    path: Path.resolve(getProxyDirectory(outDir), `${ g.name }.ts`),
+                    exports: [ { type: g.name, isArray: false, isCustomType: false, isProxyUtil: false } ],
+                    imports: unique(
+                        mapMany(
+                            mapMany(g.endpoints, e => e.methods), 
+                            m => m.parameters
+                                .map(p => p.type)
+                                .concat(m.responses
+                                    .map(r => r.type)))
+                            .filter(t => t.isCustomType),
+                        t => t.type
+                    ).concat([
+                        ApiFactoryTypeInfo,
+                        ApiTypeInfo,
+                        ConfigureRequestTypeInfo,
+                        HttpOptionsTypeInfo,
+                        HttpRequestTypeInfo, 
+                        HttpResponseTypeInfo
+                    ])
+                }))
+            )
             .concat([
-                ApiTypeInfo,
-                ApiFactoryTypeInfo,
-                HttpRequestTypeInfo,
-                HttpResponseTypeInfo,
-                HttpOptionsTypeInfo,
-                ConfigureRequestTypeInfo
-            ]),
-        resolveModule
-    );
-
-    const bs = Emitter.$module([
-        Emitter.$block(
-            Object.keys(bsDeps).map(k => Emitter.$import(bsDeps[k].map(d => d.type), k))
-        ),
-        Emitter.$proxy(bsEnd)
-    ])();
-
-    modules.forEach(m => {
-        const deps = resolveDependencies(m.properties.map(p => p.type), resolveModule);
-        emitter.emit(
-            m.name,
-            Emitter.$module([
-                Emitter.$block(
-                    Object.keys(deps).map(k => Emitter.$import(deps[k].map(d => d.type), k))
-                ),
-                Emitter.$model(m)
-            ])()
+               {
+                   name: "ProxyUtils",
+                   path: Path.resolve(outDir, `ProxyUtils.ts`),
+                   exports: [
+                        ApiFactoryTypeInfo,
+                        ApiTypeInfo,
+                        ConfigureRequestTypeInfo,
+                        HttpOptionsTypeInfo,
+                        HttpRequestTypeInfo, 
+                        HttpResponseTypeInfo
+                   ],
+                   imports: []
+               } 
+            ]);
+        
+        modules.forEach(m => 
+            resolveModuleDependencies(m, type => modules.find(m => m.exports.some(e => e.type === type.type)))
         );
+        
+        FS.writeFileSync("foo.json", JSON.stringify(modules));
     });
-});
-
-interface HttpRequest {
-    query(q: any);
-    send(d: any);
 }
 
-interface ConfigureRequest {
-    (request: HttpRequest): void;
-}
-
-interface ApiFactory {
-    (name: string): Api;
-}
-
-interface HttpOptions {
-    url: string;
-    actionKey: string;
-    emitPending?: boolean;
-    keepActiveRequests?: boolean;
-}
-
-interface HttpResponse<T> {
-    body: T;
-}
-
-declare interface Api {
-    get<T>(options: HttpOptions, setup?: (req: any) => void): Promise<HttpResponse<T>>;
-    get(options: HttpOptions, setup?: (req: any) => void): Promise<HttpResponse<any>>;
-    post(options: HttpOptions, setup?: (req: any) => void): Promise<HttpResponse<any>>;
-    put(options: HttpOptions, setup?: (req: any) => void): Promise<HttpResponse<any>>;
-    del(options: HttpOptions, setup?: (req: any) => void): Promise<HttpResponse<any>>;
-}
+init(process.cwd());
