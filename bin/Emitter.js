@@ -6,9 +6,15 @@ Object.defineProperty(exports, "__esModule", {
 exports.firstCharToUpperCase = exports.firstCharToLowerCase = exports.tab = exports.newline = undefined;
 exports.expandTypeInfo = expandTypeInfo;
 
+var _keys = require("babel-runtime/core-js/object/keys");
+
+var _keys2 = _interopRequireDefault(_keys);
+
 var _Builtins = require("./Builtins");
 
 var _Utils = require("./Utils");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var newline = exports.newline = function newline() {
     var count = arguments.length <= 0 || arguments[0] === undefined ? 1 : arguments[0];
@@ -62,6 +68,12 @@ var Emitter;
         };
     }
     Emitter.$import = $import;
+    function $reexport(aliases, ref) {
+        return function () {
+            return "export { " + aliases.join(", ") + " } from \"" + ref + "\";";
+        };
+    }
+    Emitter.$reexport = $reexport;
     function $module(children) {
         return function () {
             return children.map(function (c) {
@@ -125,7 +137,7 @@ var Emitter;
                 return p.in === "query";
             });
             return "{ " + queryParams.map(function (p) {
-                return p.name;
+                return !! ~p.name.indexOf(".") ? "\"" + p.name + "\": " + sanitizeArgumentName(p.name) : p.name;
             }).join(", ") + " }";
         };
         var getBodyParam = function getBodyParam(params) {
@@ -143,8 +155,7 @@ var Emitter;
     }
     Emitter.$proxyMethod = $proxyMethod;
     function $proxy(endpointGroup) {
-        var proxyName = getProxyName(endpointGroup.name);
-        return $block([$str("export default function " + proxyName + "(apiFactory: " + _Builtins.ApiFactoryTypeInfo.type + ") {"), $block([$str("const api = apiFactory(\"" + proxyName + "\");"), $str("return {"), $block((0, _Utils.mapMany)(endpointGroup.endpoints, function (e) {
+        return $block([$str("export function " + endpointGroup.name + "(apiFactory: " + _Builtins.ApiFactoryTypeInfo.type + ") {"), $block([$str("const api = apiFactory(\"" + endpointGroup.name + "\");"), $str("return {"), $block((0, _Utils.mapMany)(endpointGroup.endpoints, function (e) {
             return e.methods.map(function (m) {
                 return { method: m, path: e.path };
             });
@@ -153,5 +164,19 @@ var Emitter;
         }), 1, "," + newline()), $str("};")], 1), $str("}")]);
     }
     Emitter.$proxy = $proxy;
+    function $index(deps) {
+        return $block((0, _keys2.default)(deps).map(function (d) {
+            return $reexport(deps[d], d);
+        }));
+    }
+    Emitter.$index = $index;
+    function $endpointIndex(endpointTypes) {
+        return $block([$str("export default function (apiFactory: " + _Builtins.ApiFactoryTypeInfo.type + ") {"), $block([$str("return {"), $block(endpointTypes.filter(function (e) {
+            return !e.isBuiltin;
+        }).map(function (e) {
+            return $str(e.type + ": " + e.type + "(apiFactory)");
+        }), 2, "," + newline()), $str("};")], 1), $str("}")]);
+    }
+    Emitter.$endpointIndex = $endpointIndex;
 })(Emitter || (Emitter = {}));
 exports.default = Emitter;

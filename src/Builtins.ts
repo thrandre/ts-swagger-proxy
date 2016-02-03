@@ -1,38 +1,38 @@
 import { ITypeInfo, createTypeInfo } from "./Metadata";
 
-export const ApiTypeInfo: ITypeInfo = createTypeInfo("Api", false, true);
-export const ApiFactoryTypeInfo: ITypeInfo = { type: "ApiFactory", isArray: false, isCustomType: true, isProxyUtil: true };
-export const HttpRequestTypeInfo: ITypeInfo = { type: "HttpRequest", isArray: false, isCustomType: true, isProxyUtil: true };
-export const HttpResponseTypeInfo: ITypeInfo = { type: "HttpResponse", isArray: false, isCustomType: true, isProxyUtil: true };
-export const HttpOptionsTypeInfo: ITypeInfo = { type: "HttpOptions", isArray: false, isCustomType: true, isProxyUtil: true };
-export const ConfigureRequestTypeInfo: ITypeInfo = { type: "ConfigureRequest", isArray: false, isCustomType: true, isProxyUtil: true };
+export const ApiTypeInfo = createTypeInfo("Api", false, true, true);
+export const ApiFactoryTypeInfo = createTypeInfo("ApiFactory", false, true, true);
+export const HttpRequestTypeInfo = createTypeInfo("HttpRequest", false, true, true);
+export const HttpResponseTypeInfo = createTypeInfo("HttpResponse", false, true, true);
+export const HttpOptionsTypeInfo = createTypeInfo("HttpOptions", false, true, true);
+export const ConfigureRequestTypeInfo = createTypeInfo("ConfigureRequest", false, true, true);
 
 export const ProxyUtils = 
-`interface HttpRequest {
+`export interface HttpRequest {
     query(q: any);
     send(d: any);
 }
 
-interface ConfigureRequest {
+export interface ConfigureRequest {
     (request: HttpRequest): void;
 }
 
-interface ApiFactory {
+export interface ApiFactory {
     (name: string): Api;
 }
 
-interface HttpOptions {
+export interface HttpOptions {
     url: string;
     actionKey: string;
     emitPending?: boolean;
     keepActiveRequests?: boolean;
 }
 
-interface HttpResponse<T> {
+export interface HttpResponse<T> {
     body: T;
 }
 
-declare interface Api {
+export interface Api {
     get<T>(options: HttpOptions, setup?: (req: any) => void): Promise<HttpResponse<T>>;
     get(options: HttpOptions, setup?: (req: any) => void): Promise<HttpResponse<any>>;
     post(options: HttpOptions, setup?: (req: any) => void): Promise<HttpResponse<any>>;

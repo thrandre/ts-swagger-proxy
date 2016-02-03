@@ -3,6 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.getProxyName = exports.getModelName = undefined;
 exports.groupBy = groupBy;
 exports.unique = unique;
 exports.mapMany = mapMany;
@@ -46,3 +47,9 @@ function resolveJsonRef(root, ref) {
         return prev[next];
     }, root)];
 }
+var getModelName = exports.getModelName = function getModelName(name) {
+    return name.endsWith("ViewModel") ? name : name + "ViewModel";
+};
+var getProxyName = exports.getProxyName = function getProxyName(name) {
+    return name.endsWith("Proxy") ? name : name + "Proxy";
+};

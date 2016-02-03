@@ -1,8 +1,3 @@
-export interface IModule {
-    name: string;
-    models: IModel[];
-}
-
 export interface IModel {
     name: string;
     properties: IProperty[];
@@ -43,6 +38,7 @@ export interface ITypeInfo {
     type: string;
     isArray: boolean;
     isCustomType: boolean;
+    isBuiltin?: boolean;
 }
 
 export interface IEndpointGroup {
@@ -50,10 +46,33 @@ export interface IEndpointGroup {
     endpoints: IEndpoint[];
 }
 
-export function createTypeInfo(type: string, isArray: boolean = false, isCustomType: boolean = false): ITypeInfo {
+export interface IModule {
+    name: string;
+    path: string;
+    kind: ModuleKind;
+    model?: IModel;
+    endpointGroup?: IEndpointGroup;
+    exports: ITypeInfo[];
+    imports: ITypeInfo[];
+}
+
+export interface IDependencyMap {
+    [key: string]: string[]
+}
+
+export enum ModuleKind {
+    Model,
+    Proxy,
+    Util,
+    Index,
+    EndpointIndex
+}
+
+export function createTypeInfo(type: string, isArray: boolean = false, isCustomType: boolean = false, isBuiltin: boolean = false): ITypeInfo {
     return {
       type,
       isArray,
-      isCustomType  
+      isCustomType,
+      isBuiltin
     };
 }

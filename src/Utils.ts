@@ -32,3 +32,6 @@ export function resolveJsonRef(root: any, ref: string): [string, any] {
 
     return [pathSegments[pathSegments.length - 1], pathSegments.reduce((prev, next) => prev[next], root)];
 }
+
+export const getModelName = (name: string) => name.endsWith("ViewModel") ? name : `${ name }ViewModel`;
+export const getProxyName = (name: string) => name.endsWith("Proxy") ? name : `${ name }Proxy`;

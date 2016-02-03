@@ -1,5 +1,5 @@
 import { ApiFactoryTypeInfo, ApiTypeInfo, ConfigureRequestTypeInfo, HttpOptionsTypeInfo, HttpRequestTypeInfo, HttpResponseTypeInfo } from "./Builtins";
-import { IEndpointGroup, IModel, IMethod, IParameter, ITypeInfo } from "./Metadata";
+import { IEndpointGroup, IModel, IMethod, IParameter, ITypeInfo, IDependencyMap } from "./Metadata";
 import { mapMany } from "./Utils";
 
 export const newline = (count: number = 1) => `\r\n`.repeat(count);
@@ -35,7 +35,11 @@ namespace Emitter {
     }
 
     export function $import(aliases: string[], ref: string): IUnit {
-        return () => `import { ${aliases.join(", ")} } from "${ref}";`;
+        return () => `import { ${ aliases.join(", ") } } from "${ ref }";`;
+    }
+    
+    export function $reexport(aliases: string[], ref: string): IUnit {
+        return () => `export { ${ aliases.join(", ") } } from "${ ref }";`;
     }
 
     export function $module(children: IUnit[]): IUnit {
@@ -80,7 +84,7 @@ namespace Emitter {
         const needsRequestBuilder = needsQueryBuilder || needsBodyBuilder;
         const getQueryParams = (params: IParameter[]) => {
             const queryParams = params.filter(p => p.in === "query");
-            return `{ ${queryParams.map(p => p.name).join(", ")} }`;
+            return `{ ${ queryParams.map(p => !!~p.name.indexOf(".") ? `"${ p.name }": ${ sanitizeArgumentName(p.name) }` : p.name).join(", ") } }`;
         };
         const getBodyParam = (params: IParameter[]) => params.find(p => p.in === "body").name;
 
@@ -101,7 +105,7 @@ namespace Emitter {
                 needsRequestBuilder && $str(`const buildRequest: ${ConfigureRequestTypeInfo.type} = req => req.${
                     [
                         needsQueryBuilder && `query(query)`,
-                        needsBodyBuilder && `send(${getBodyParam(proxyMethod.parameters)})`,
+                        needsBodyBuilder && `send(${ getBodyParam(proxyMethod.parameters) })`,
                         `;`
                     ]
                         .filter(p => !!p)
@@ -116,11 +120,10 @@ namespace Emitter {
     }
 
     export function $proxy(endpointGroup: IEndpointGroup): IUnit {
-        const proxyName = getProxyName(endpointGroup.name);
         return $block([
-            $str(`export default function ${proxyName}(apiFactory: ${ApiFactoryTypeInfo.type}) {`),
+            $str(`export function ${ endpointGroup.name }(apiFactory: ${ ApiFactoryTypeInfo.type }) {`),
             $block([
-                $str(`const api = apiFactory("${proxyName}");`),
+                $str(`const api = apiFactory("${ endpointGroup.name }");`),
                 $str(`return {`),
                 $block(
                     mapMany(endpointGroup.endpoints, e => e.methods.map(m => ({ method: m, path: e.path })))
@@ -133,7 +136,29 @@ namespace Emitter {
             $str(`}`)
         ]);
     }
-
+    
+    export function $index(deps: IDependencyMap): IUnit {
+        return $block(
+            Object.keys(deps).map(d => $reexport(deps[d], d))
+        );
+    }
+    
+    export function $endpointIndex(endpointTypes: ITypeInfo[]): IUnit {
+        return $block([
+            $str(`export default function (apiFactory: ${ ApiFactoryTypeInfo.type }) {`),
+            $block([
+                $str(`return {`),
+                $block(
+                    endpointTypes
+                        .filter(e => !e.isBuiltin)
+                        .map(e => $str(`${ e.type }: ${ e.type }(apiFactory)`)), 
+                    2, "," + newline()),
+                $str(`};`)
+            ], 1),
+            $str(`}`)
+        ]);
+    }
+    
 }
 
 export default Emitter;
