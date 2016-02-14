@@ -10,6 +10,10 @@ var _keys = require("babel-runtime/core-js/object/keys");
 
 var _keys2 = _interopRequireDefault(_keys);
 
+var _stringify = require("babel-runtime/core-js/json/stringify");
+
+var _stringify2 = _interopRequireDefault(_stringify);
+
 var _Builtins = require("./Builtins");
 
 var _Utils = require("./Utils");
@@ -90,8 +94,8 @@ var Emitter;
         }), 1), $str("}")]);
     }
     Emitter.$model = $model;
-    function $proxyMethod(path, proxyMethod, prependWith) {
-        var level = arguments.length <= 3 || arguments[3] === undefined ? 0 : arguments[3];
+    function $proxyMethod(path, proxyMethod, getModel, prependWith) {
+        var level = arguments.length <= 4 || arguments[4] === undefined ? 0 : arguments[4];
 
         var sanitizeArgumentName = function sanitizeArgumentName(argumentName) {
             return argumentName.replace(/\./g, "_");
@@ -147,20 +151,47 @@ var Emitter;
         };
         var args = getMethodArguments(proxyMethod);
         var returnType = getMethodReturnType(proxyMethod);
-        return $block([$str([prependWith || "", "(" + args + "): " + transformMethodReturnType(returnType) + " {"].join("")), $block([$str("const options: " + _Builtins.HttpOptionsTypeInfo.type + " = {"), $block([$str("actionKey: \"" + getActionKey(proxyMethod) + "\""), $str("url: `" + transformUriParamsInPath(path) + "`"), $str("emitPending: true")], level + 2, "," + newline()), $str("};"), needsQueryBuilder && $str("const query = " + getQueryParams(proxyMethod.parameters) + ";"), needsRequestBuilder && $str("const buildRequest: " + _Builtins.ConfigureRequestTypeInfo.type + " = req => req." + [needsQueryBuilder && "query(query)", needsBodyBuilder && "send(" + getBodyParam(proxyMethod.parameters) + ")", ";"].filter(function (p) {
+        var getShape = function getShape(type) {
+            return (0, _stringify2.default)(type.isCustomType ? getModel(type).model.properties.reduce(function (prev, next) {
+                prev[next.name] = null;
+                return prev;
+            }, {}) : {});
+        };
+        var getTypeAssertion = function getTypeAssertion(param) {
+            if (param.type.isArray) {
+                return "isArray(\"" + param.name + "\", " + param.name + ", " + !param.required + ", \"argument\", " + getShape(param.type) + ")";
+            }
+            if (param.type.isCustomType) {
+                return "hasShape(\"" + param.name + "\", " + param.name + ", " + !param.required + ", \"argument\", " + getShape(param.type) + ")";
+            }
+            return {
+                number: function number(name, optional) {
+                    return "isNumber(\"" + name + "\", " + name + ", " + optional + ", \"argument\")";
+                },
+                string: function string(name, optional) {
+                    return "isString(\"" + name + "\", " + name + ", " + optional + ", \"argument\")";
+                },
+                boolean: function boolean(name, optional) {
+                    return "isBoolean(\"" + name + "\", " + name + ", " + optional + ", \"argument\")";
+                }
+            }[param.type.type](sanitizeArgumentName(param.name), !param.required);
+        };
+        return $block([$str([prependWith || "", "(" + args + "): " + transformMethodReturnType(returnType) + " {"].join("")), proxyMethod.parameters.length > 0 && $block([$str("assert("), $block(proxyMethod.parameters.map(function (p) {
+            return $str(getTypeAssertion(p));
+        }), level + 2, "," + newline()), $str(")(m => console.warn(m));")], level + 1), $block([$str("const options: " + _Builtins.HttpOptionsTypeInfo.type + " = {"), $block([$str("actionKey: \"" + getActionKey(proxyMethod) + "\""), $str("url: `" + transformUriParamsInPath(path) + "`"), $str("emitPending: true")], level + 2, "," + newline()), $str("};"), needsQueryBuilder && $str("const query = " + getQueryParams(proxyMethod.parameters) + ";"), needsRequestBuilder && $str("const buildRequest: " + _Builtins.ConfigureRequestTypeInfo.type + " = req => req." + [needsQueryBuilder && "query(query)", needsBodyBuilder && "send(" + getBodyParam(proxyMethod.parameters) + ")", ";"].filter(function (p) {
             return !!p;
         }).join(""))], level + 1), $block([$str("return api." + mapMethod(proxyMethod.method, returnType) + "(" + ["options", needsRequestBuilder && "buildRequest"].filter(function (a) {
             return !!a;
         }).join(", ") + ");")], level + 1), $str("}")], level);
     }
     Emitter.$proxyMethod = $proxyMethod;
-    function $proxy(endpointGroup) {
+    function $proxy(endpointGroup, getModel) {
         return $block([$str("export function " + endpointGroup.name + "(apiFactory: " + _Builtins.ApiFactoryTypeInfo.type + ") {"), $block([$str("const api = apiFactory(\"" + endpointGroup.name + "\");"), $str("return {"), $block((0, _Utils.mapMany)(endpointGroup.endpoints, function (e) {
             return e.methods.map(function (m) {
                 return { method: m, path: e.path };
             });
         }).map(function (e) {
-            return $proxyMethod(e.path, e.method, firstCharToLowerCase(e.method.name), 2);
+            return $proxyMethod(e.path, e.method, getModel, firstCharToLowerCase(e.method.name), 2);
         }), 1, "," + newline()), $str("};")], 1), $str("}")]);
     }
     Emitter.$proxy = $proxy;

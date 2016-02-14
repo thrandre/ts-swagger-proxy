@@ -95,17 +95,21 @@ function init(workingDirectory) {
     }
     var outDir = Path.resolve(Path.dirname(manifestPath), manifest.out);
     if (manifest.flush) {
-        (0, _FsUtils.removeDirectory)(outDir);
+        (0, _FsUtils.removeDirectory)(getModelDirectory(outDir));
+        (0, _FsUtils.removeDirectory)(getProxyDirectory(outDir));
     }
     (0, _FsUtils.ensureDirectoriesExists)(outDir, getModelDirectory(outDir), getProxyDirectory(outDir));
-    generateProxy(manifest.url, outDir);
+    generateProxy(manifest.url, outDir, manifest.preserveUtils);
 }
 function resolveModuleDependencies(mod, resolve) {
     var deps = (0, _Utils.groupBy)(mod.imports, function (i) {
         return resolve(i).path;
     });
     return (0, _keys2.default)(deps).reduce(function (prev, next) {
-        var relativePath = ((Path.relative(Path.dirname(mod.path), Path.dirname(next)) || ".") + Path.sep + Path.basename(next, ".ts")).replace(/\\/g, "/");
+        var enforceStandingDir = function enforceStandingDir(path) {
+            return !path.startsWith(".") ? "." + Path.sep + path : path;
+        };
+        var relativePath = enforceStandingDir((Path.relative(Path.dirname(mod.path), Path.dirname(next)) || ".") + Path.sep + Path.basename(next, ".ts")).replace(/\\/g, "/");
         prev[relativePath] = deps[next].map(function (d) {
             return d.type;
         });
@@ -135,7 +139,7 @@ var moduleEmitters = (_moduleEmitters = {}, (0, _defineProperty3.default)(_modul
         path: proxy.path,
         content: _Emitter2.default.$module([_Emitter2.default.$block((0, _keys2.default)(deps).map(function (d) {
             return _Emitter2.default.$import(deps[d], d);
-        })), _Emitter2.default.$proxy(proxy.endpointGroup)])()
+        })), _Emitter2.default.$proxy(proxy.endpointGroup, resolve)])()
     };
 }), (0, _defineProperty3.default)(_moduleEmitters, _Metadata.ModuleKind.Util, function (util, resolve) {
     return {
@@ -160,6 +164,8 @@ var moduleEmitters = (_moduleEmitters = {}, (0, _defineProperty3.default)(_modul
     };
 }), _moduleEmitters);
 function generateProxy(url, outDir) {
+    var preserveUtils = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
+
     var parser = new _Swagger2.default();
     Request.get(url, function (err, res) {
         if (err) {
@@ -203,13 +209,13 @@ function generateProxy(url, outDir) {
                     return t.isCustomType;
                 }), function (t) {
                     return t.type;
-                }).concat([_Builtins.ApiFactoryTypeInfo, _Builtins.ApiTypeInfo, _Builtins.ConfigureRequestTypeInfo, _Builtins.HttpOptionsTypeInfo, _Builtins.HttpRequestTypeInfo, _Builtins.HttpResponseTypeInfo])
+                }).concat([_Builtins.ApiFactoryTypeInfo, _Builtins.ApiTypeInfo, _Builtins.ConfigureRequestTypeInfo, _Builtins.HttpOptionsTypeInfo, _Builtins.HttpRequestTypeInfo, _Builtins.HttpResponseTypeInfo, _Builtins.AssertTypeInfo, _Builtins.CheckTypeInfo, _Builtins.IsNumberTypeInfo, _Builtins.IsStringTypeInfo, _Builtins.IsBooleanTypeInfo, _Builtins.IsArrayTypeInfo, _Builtins.HasShapeTypeInfo])
             };
         })).concat([{
             name: "ProxyUtils",
             path: Path.resolve(outDir, "ProxyUtils.ts"),
             kind: _Metadata.ModuleKind.Util,
-            exports: [_Builtins.ApiFactoryTypeInfo, _Builtins.ApiTypeInfo, _Builtins.ConfigureRequestTypeInfo, _Builtins.HttpOptionsTypeInfo, _Builtins.HttpRequestTypeInfo, _Builtins.HttpResponseTypeInfo],
+            exports: [_Builtins.ApiFactoryTypeInfo, _Builtins.ApiTypeInfo, _Builtins.ConfigureRequestTypeInfo, _Builtins.HttpOptionsTypeInfo, _Builtins.HttpRequestTypeInfo, _Builtins.HttpResponseTypeInfo, _Builtins.AssertTypeInfo, _Builtins.CheckTypeInfo, _Builtins.IsNumberTypeInfo, _Builtins.IsStringTypeInfo, _Builtins.IsBooleanTypeInfo, _Builtins.IsArrayTypeInfo, _Builtins.HasShapeTypeInfo],
             imports: []
         }]);
         moduleGraph = moduleGraph.concat([{
@@ -246,7 +252,9 @@ function generateProxy(url, outDir) {
             }).concat([_Builtins.ApiFactoryTypeInfo])
         }]);
         var resolver = getModuleResolver(moduleGraph);
-        var moduleOutputs = moduleGraph.map(function (m) {
+        var moduleOutputs = moduleGraph.filter(function (m) {
+            return m.kind !== _Metadata.ModuleKind.Util || !preserveUtils;
+        }).map(function (m) {
             return moduleEmitters[m.kind](m, resolver);
         });
         moduleOutputs.forEach(function (b) {

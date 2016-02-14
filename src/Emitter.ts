@@ -1,5 +1,5 @@
 import { ApiFactoryTypeInfo, ApiTypeInfo, ConfigureRequestTypeInfo, HttpOptionsTypeInfo, HttpRequestTypeInfo, HttpResponseTypeInfo } from "./Builtins";
-import { IEndpointGroup, IModel, IMethod, IParameter, ITypeInfo, IDependencyMap } from "./Metadata";
+import { IEndpointGroup, IModule, IModel, IMethod, IParameter, ITypeInfo, IDependencyMap } from "./Metadata";
 import { mapMany } from "./Utils";
 
 export const newline = (count: number = 1) => `\r\n`.repeat(count);
@@ -54,7 +54,7 @@ namespace Emitter {
         ]);
     }
 
-    export function $proxyMethod(path: string, proxyMethod: IMethod, prependWith?: string, level: number = 0): IUnit {
+    export function $proxyMethod(path: string, proxyMethod: IMethod, getModel: (type: ITypeInfo) => IModule, prependWith?: string, level: number = 0): IUnit {
         const sanitizeArgumentName = (argumentName: string) => argumentName.replace(/\./g, "_");
 
         const getMethodArguments = (method: IMethod) => method.parameters
@@ -90,10 +90,43 @@ namespace Emitter {
 
         const args = getMethodArguments(proxyMethod);
         const returnType = getMethodReturnType(proxyMethod);
-
+		
+		const getShape = (type: ITypeInfo) => JSON.stringify(
+			type.isCustomType ?
+				getModel(type).model.properties.reduce((prev, next) => {
+					prev[next.name] = null;
+					return prev;
+				}, {}) :
+			{}
+		);
+		
+		const getTypeAssertion = (param: IParameter) => {
+			if(param.type.isArray) {
+				return `isArray("${ param.name }", ${ param.name }, ${ !param.required }, "argument", ${ getShape(param.type) })`;
+			}
+			
+			if(param.type.isCustomType) {
+				return `hasShape("${ param.name }", ${ param.name }, ${ !param.required }, "argument", ${ getShape(param.type) })`;
+			}
+			
+			return {
+				number: (name, optional) => `isNumber("${ name }", ${ name }, ${ optional }, "argument")`,
+				string: (name, optional) => `isString("${ name }", ${ name }, ${ optional }, "argument")`,
+				boolean: (name, optional) => `isBoolean("${ name }", ${ name }, ${ optional }, "argument")`
+			}[param.type.type](sanitizeArgumentName(param.name), !param.required);
+		};
+		
         return $block([
             $str([prependWith || "", `(${args}): ${transformMethodReturnType(returnType)} {`].join("")),
-            $block([
+            proxyMethod.parameters.length > 0 && $block([
+				$str(`assert(`),
+				$block(
+					proxyMethod.parameters.map(p => $str(getTypeAssertion(p))),
+					level + 2, "," + newline()
+				),
+				$str(`)(m => console.warn(m));`)
+			], level + 1),
+			$block([
                 $str(`const options: ${ HttpOptionsTypeInfo.type } = {`),
                 $block([
                     $str(`actionKey: "${getActionKey(proxyMethod)}"`),
@@ -119,7 +152,7 @@ namespace Emitter {
         ], level);
     }
 
-    export function $proxy(endpointGroup: IEndpointGroup): IUnit {
+    export function $proxy(endpointGroup: IEndpointGroup, getModel: (type: ITypeInfo) => IModule): IUnit {
         return $block([
             $str(`export function ${ endpointGroup.name }(apiFactory: ${ ApiFactoryTypeInfo.type }) {`),
             $block([
@@ -127,7 +160,7 @@ namespace Emitter {
                 $str(`return {`),
                 $block(
                     mapMany(endpointGroup.endpoints, e => e.methods.map(m => ({ method: m, path: e.path })))
-                        .map(e => $proxyMethod(e.path, e.method, firstCharToLowerCase(e.method.name), 2)),
+                        .map(e => $proxyMethod(e.path, e.method, getModel, firstCharToLowerCase(e.method.name), 2)),
                     1,
                     "," + newline()
                 ),

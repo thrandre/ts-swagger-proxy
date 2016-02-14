@@ -13,6 +13,13 @@ import {
     HttpOptionsTypeInfo,
     HttpRequestTypeInfo,
     HttpResponseTypeInfo,
+	AssertTypeInfo,
+	CheckTypeInfo,
+	IsNumberTypeInfo, 
+	IsStringTypeInfo, 
+	IsBooleanTypeInfo,
+	IsArrayTypeInfo,
+	HasShapeTypeInfo, 
     ProxyUtils
 } from "./Builtins";
 
@@ -40,6 +47,7 @@ interface IManifest {
     url: string;
     out: string;
     flush: boolean;
+	preserveUtils: boolean;
 }
 
 class ModuleEmitter {
@@ -78,11 +86,12 @@ function init(workingDirectory: string) {
     const outDir = Path.resolve(Path.dirname(manifestPath), manifest.out);
 
     if (manifest.flush) {
-		removeDirectory(outDir);
+		removeDirectory(getModelDirectory(outDir));
+		removeDirectory(getProxyDirectory(outDir));
     }
 
     ensureDirectoriesExists(outDir, getModelDirectory(outDir), getProxyDirectory(outDir));
-    generateProxy(manifest.url, outDir);
+    generateProxy(manifest.url, outDir, manifest.preserveUtils);
 }
 
 function resolveModuleDependencies(mod: IModule, resolve: (type: ITypeInfo) => IModule): IDependencyMap {
@@ -90,11 +99,15 @@ function resolveModuleDependencies(mod: IModule, resolve: (type: ITypeInfo) => I
     return Object
         .keys(deps)
         .reduce<{ [key: string]: string[] }>((prev, next) => {
-            const relativePath = (
-                (Path.relative(Path.dirname(mod.path), Path.dirname(next)) || ".") + Path.sep +
-                Path.basename(next, ".ts")
-            )
-				.replace(/\\/g, "/");
+            const enforceStandingDir = (path: string) => !path.startsWith(".") ? 
+				"." + Path.sep + path :
+				path;
+			
+			const relativePath = enforceStandingDir(
+				(Path.relative(Path.dirname(mod.path), Path.dirname(next)) || ".") + Path.sep +
+				Path.basename(next, ".ts")
+			)
+			.replace(/\\/g, "/");
 
             prev[relativePath] = deps[next].map(d => d.type)
 
@@ -137,7 +150,7 @@ const moduleEmitters: { [key: number]: (module: IModule, resolve: IResolveModule
                 Emitter.$block(
                     Object.keys(deps).map(d => Emitter.$import(deps[d], d))
                 ),
-                Emitter.$proxy(proxy.endpointGroup)
+                Emitter.$proxy(proxy.endpointGroup, resolve)
             ])()
         };
     },
@@ -172,7 +185,7 @@ const moduleEmitters: { [key: number]: (module: IModule, resolve: IResolveModule
     }
 };
 
-function generateProxy(url: string, outDir: string) {
+function generateProxy(url: string, outDir: string, preserveUtils: boolean = false) {
     const parser = new SwaggerParser();
 
     Request.get(url, (err, res) => {
@@ -216,7 +229,14 @@ function generateProxy(url: string, outDir: string) {
 					ConfigureRequestTypeInfo,
 					HttpOptionsTypeInfo,
 					HttpRequestTypeInfo,
-					HttpResponseTypeInfo
+					HttpResponseTypeInfo,
+					AssertTypeInfo,
+					CheckTypeInfo,
+					IsNumberTypeInfo, 
+					IsStringTypeInfo, 
+					IsBooleanTypeInfo,
+					IsArrayTypeInfo,
+					HasShapeTypeInfo
 				])
 			}))
             )
@@ -231,7 +251,14 @@ function generateProxy(url: string, outDir: string) {
                         ConfigureRequestTypeInfo,
                         HttpOptionsTypeInfo,
                         HttpRequestTypeInfo,
-                        HttpResponseTypeInfo
+                        HttpResponseTypeInfo,
+						AssertTypeInfo,
+						CheckTypeInfo,
+						IsNumberTypeInfo, 
+						IsStringTypeInfo, 
+						IsBooleanTypeInfo,
+						IsArrayTypeInfo,
+						HasShapeTypeInfo
 					],
 					imports: []
 				}
@@ -270,10 +297,12 @@ function generateProxy(url: string, outDir: string) {
         ]);
 
         const resolver = getModuleResolver(moduleGraph);
-        const moduleOutputs = moduleGraph.map(m => moduleEmitters[m.kind](m, resolver));
+        const moduleOutputs = moduleGraph
+			.filter(m => m.kind !== ModuleKind.Util || !preserveUtils)
+			.map(m => moduleEmitters[m.kind](m, resolver));
 
         moduleOutputs.forEach(b => {
-            FS.writeFileSync(b.path, b.content + newline());
+			FS.writeFileSync(b.path, b.content + newline());
         });
     });
 }
