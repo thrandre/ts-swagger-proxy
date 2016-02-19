@@ -44,24 +44,31 @@ import { ensureDirectoriesExists, removeDirectory } from "./FsUtils";
 import SwaggerParser from "./Swagger";
 
 interface IManifest {
-    url: string;
-    out: string;
-    flush: boolean;
-	preserveUtils: boolean;
-}
-
-class ModuleEmitter {
-
-    constructor(private writeFile: (name: string, data: string) => void) { }
-
-    emit(name: string, data: string) {
-        this.writeFile(name, data + newline());
-    }
-
+    url?: string;
+    out?: string;
+    flush?: boolean;
+	preserveUtils?: boolean;
 }
 
 const getModelDirectory = (basepath: string) => Path.resolve(basepath, "./models");
 const getProxyDirectory = (basepath: string) => Path.resolve(basepath, "./proxies");
+
+function parseArgs(args: string[]): IManifest {
+	return args.slice(2).reduce<IManifest>((prev, next) => {
+		let [key, val] = next.split("=");
+		
+		key = key.replace("--", "");
+		
+		if(key && !val) {
+			prev[key] = true;
+			return prev;
+		}
+		
+		prev[key] = val;
+		
+		return prev;
+	}, {});
+}
 
 function groupEndpoints(endpoints: IEndpoint[]): IEndpointGroup[] {
     const groups = groupBy(endpoints, e => e.group);
@@ -71,19 +78,8 @@ function groupEndpoints(endpoints: IEndpoint[]): IEndpointGroup[] {
     }));
 }
 
-function init(workingDirectory: string) {
-    const manifestPath = Path.resolve(workingDirectory, "ts-swagger-proxy.json");
-    let manifest: IManifest = null;
-	
-	try {
-		manifest = JSON.parse(FS.readFileSync(manifestPath, "utf-8"));
-	}
-	catch(err) {
-		console.error(`Unable to find local ts-swagger-proxy.json manifest in ${ workingDirectory }`);
-		return;
-	}
-
-    const outDir = Path.resolve(Path.dirname(manifestPath), manifest.out);
+function init(workingDirectory: string, manifest: IManifest) {	
+    const outDir = Path.resolve(workingDirectory, manifest.out);
 
     if (manifest.flush) {
 		removeDirectory(getModelDirectory(outDir));
@@ -308,4 +304,11 @@ function generateProxy(url: string, outDir: string, preserveUtils: boolean = fal
     });
 }
 
-init(process.cwd());
+const defaultManifest: IManifest = {
+	url: "",
+	out: "",
+	flush: false,
+	preserveUtils: false
+};
+
+init(process.cwd(), Object.assign({}, defaultManifest, parseArgs(process.argv)));

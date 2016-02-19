@@ -3,6 +3,10 @@
 
 var _moduleEmitters;
 
+var _assign = require("babel-runtime/core-js/object/assign");
+
+var _assign2 = _interopRequireDefault(_assign);
+
 var _defineProperty2 = require("babel-runtime/helpers/defineProperty");
 
 var _defineProperty3 = _interopRequireDefault(_defineProperty2);
@@ -11,13 +15,9 @@ var _keys = require("babel-runtime/core-js/object/keys");
 
 var _keys2 = _interopRequireDefault(_keys);
 
-var _classCallCheck2 = require("babel-runtime/helpers/classCallCheck");
+var _slicedToArray2 = require("babel-runtime/helpers/slicedToArray");
 
-var _classCallCheck3 = _interopRequireDefault(_classCallCheck2);
-
-var _createClass2 = require("babel-runtime/helpers/createClass");
-
-var _createClass3 = _interopRequireDefault(_createClass2);
+var _slicedToArray3 = _interopRequireDefault(_slicedToArray2);
 
 var _superagent = require("superagent");
 
@@ -51,28 +51,30 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var ModuleEmitter = function () {
-    function ModuleEmitter(writeFile) {
-        (0, _classCallCheck3.default)(this, ModuleEmitter);
-
-        this.writeFile = writeFile;
-    }
-
-    (0, _createClass3.default)(ModuleEmitter, [{
-        key: "emit",
-        value: function emit(name, data) {
-            this.writeFile(name, data + (0, _Emitter.newline)());
-        }
-    }]);
-    return ModuleEmitter;
-}();
-
 var getModelDirectory = function getModelDirectory(basepath) {
     return Path.resolve(basepath, "./models");
 };
 var getProxyDirectory = function getProxyDirectory(basepath) {
     return Path.resolve(basepath, "./proxies");
 };
+function parseArgs(args) {
+    return args.slice(2).reduce(function (prev, next) {
+        var _next$split = next.split("=");
+
+        var _next$split2 = (0, _slicedToArray3.default)(_next$split, 2);
+
+        var key = _next$split2[0];
+        var val = _next$split2[1];
+
+        key = key.replace("--", "");
+        if (key && !val) {
+            prev[key] = true;
+            return prev;
+        }
+        prev[key] = val;
+        return prev;
+    }, {});
+}
 function groupEndpoints(endpoints) {
     var groups = (0, _Utils.groupBy)(endpoints, function (e) {
         return e.group;
@@ -84,16 +86,8 @@ function groupEndpoints(endpoints) {
         };
     });
 }
-function init(workingDirectory) {
-    var manifestPath = Path.resolve(workingDirectory, "ts-swagger-proxy.json");
-    var manifest = null;
-    try {
-        manifest = JSON.parse(FS.readFileSync(manifestPath, "utf-8"));
-    } catch (err) {
-        console.error("Unable to find local ts-swagger-proxy.json manifest in " + workingDirectory);
-        return;
-    }
-    var outDir = Path.resolve(Path.dirname(manifestPath), manifest.out);
+function init(workingDirectory, manifest) {
+    var outDir = Path.resolve(workingDirectory, manifest.out);
     if (manifest.flush) {
         (0, _FsUtils.removeDirectory)(getModelDirectory(outDir));
         (0, _FsUtils.removeDirectory)(getProxyDirectory(outDir));
@@ -262,4 +256,10 @@ function generateProxy(url, outDir) {
         });
     });
 }
-init(process.cwd());
+var defaultManifest = {
+    url: "",
+    out: "",
+    flush: false,
+    preserveUtils: false
+};
+init(process.cwd(), (0, _assign2.default)({}, defaultManifest, parseArgs(process.argv)));

@@ -14,7 +14,7 @@ gulp.task("default", function () {
 });
 
 gulp.task("run", ["default"], function(cb) {
-    exec("node ./bin/Index.js", function(err, stdout, stderr) {
+    exec("node ./bin/Index.js --preserveUtils --flush --url=http://www.google.com --out=test", function(err, stdout, stderr) {
         if(err) {
             console.error(stderr);
         }
