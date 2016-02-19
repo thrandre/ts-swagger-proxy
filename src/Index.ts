@@ -291,7 +291,8 @@ function generateProxy(url: string, outDir: string, preserveUtils: boolean = fal
                 kind: ModuleKind.EndpointIndex,
                 exports: [],
                 imports: moduleGraph
-                    .filter(m => m.kind === ModuleKind.Proxy).map(m => createTypeInfo(m.name))
+                    .filter(m => m.kind === ModuleKind.Proxy)
+					.map(m => createTypeInfo(m.name))
                     .concat([ApiFactoryTypeInfo])
             }
         ]);
