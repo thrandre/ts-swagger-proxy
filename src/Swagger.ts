@@ -51,6 +51,7 @@ namespace Swagger {
     interface ISwaggerApiResponseTypeDefinition {
         type: string;
         properties: { [key: string]: ISwaggerApiResponsePropertyDefinition }
+		enum: string[];
     }
 
     interface ISwaggerApiResponseDataTypeDefinition {
@@ -115,10 +116,11 @@ namespace Swagger {
                 .map(k => this.getModelProperty(k, properties[k], data));
         }
 
-        private static getModel(name: string, typeDefinition: ISwaggerApiResponseTypeDefinition, data: ISwaggerApiResponse) {
-            return {
+        private static getModel(name: string, typeDefinition: ISwaggerApiResponseTypeDefinition, data: ISwaggerApiResponse): IModel {
+			return {
                 name,
-                properties: this.getModelProperties(typeDefinition.properties, data)
+                properties: this.getModelProperties(typeDefinition.properties, data),
+				enum: typeDefinition.enum
             };
         }
 

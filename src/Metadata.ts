@@ -1,6 +1,7 @@
 export interface IModel {
     name: string;
     properties: IProperty[];
+	enum: string[];
 }
 
 export interface IProperty {

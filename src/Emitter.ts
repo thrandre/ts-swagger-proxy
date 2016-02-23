@@ -47,7 +47,12 @@ namespace Emitter {
     }
 
     export function $model(model: IModel): IUnit {
-        return $block([
+        if(model.enum) {
+			return $block([
+				$str(`export type ${ model.name } = ${ model.enum.map(e => `"${e}"`).join(" | ") };`)
+			]);
+		}
+		return $block([
             $str(`export interface ${model.name} {`),
             $block(model.properties.map(p => $str(`${p.name}: ${ expandTypeInfo(p.type) };`)), 1),
             $str(`}`)
