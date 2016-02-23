@@ -82,7 +82,8 @@ var Swagger;
             value: function getModel(name, typeDefinition, data) {
                 return {
                     name: name,
-                    properties: this.getModelProperties(typeDefinition.properties, data)
+                    properties: this.getModelProperties(typeDefinition.properties, data),
+                    enum: typeDefinition.enum
                 };
             }
         }, {

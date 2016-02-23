@@ -89,6 +89,11 @@ var Emitter;
     }
     Emitter.$module = $module;
     function $model(model) {
+        if (model.enum) {
+            return $block([$str("export type " + model.name + " = " + model.enum.map(function (e) {
+                return "\"" + e + "\"";
+            }).join(" | ") + ";")]);
+        }
         return $block([$str("export interface " + model.name + " {"), $block(model.properties.map(function (p) {
             return $str(p.name + ": " + expandTypeInfo(p.type) + ";");
         }), 1), $str("}")]);
