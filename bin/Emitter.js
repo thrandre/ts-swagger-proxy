@@ -110,7 +110,7 @@ var Emitter;
                 return {
                     v: $block([$str("export type " + getLiteralName(model.name) + " = " + model.enum.map(function (e) {
                         return "\"" + getLiteral(e) + "\"";
-                    }).join(" | ") + ";"), $block([$str("const " + getEnumName(model.name) + " = {"), $block(model.enum.map(function (e) {
+                    }).join(" | ") + ";"), $block([$str("export const " + getEnumName(model.name) + " = {"), $block(model.enum.map(function (e) {
                         return $str(getKey(e) + ": \"" + getLiteral(e) + "\" as " + getLiteralName(model.name));
                     }), 1, "," + newline()), $str("};")])])
                 };

@@ -223,7 +223,9 @@ function generateProxy(url, outDir) {
                 return m.kind === _Metadata.ModuleKind.Model;
             }).reduce(function (prev, next) {
                 prev.concat(next.exports);return prev;
-            }, [])
+            }, []).map(function (t) {
+                return (0, _Metadata.createTypeInfo)(t.type);
+            })
         }]);
         moduleGraph = moduleGraph.concat([{
             name: "ProxyIndex",
@@ -253,6 +255,7 @@ function generateProxy(url, outDir) {
         }).map(function (m) {
             return moduleEmitters[m.kind](m, resolver);
         });
+        console.log(moduleGraph);
         moduleOutputs.forEach(function (b) {
             FS.writeFileSync(b.path, b.content + (0, _Emitter.newline)());
         });
