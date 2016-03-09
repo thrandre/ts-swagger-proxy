@@ -123,7 +123,7 @@ var moduleEmitters = (_moduleEmitters = {}, (0, _defineProperty3.default)(_modul
     var deps = resolveModuleDependencies(model, resolve);
     model.model.properties.forEach(function (p) {
         var mod = resolve(p.type);
-        if (mod.model.enum) {
+        if (mod && mod.model.enum) {
             p.type.type = p.type.type + "Type";
         }
     });

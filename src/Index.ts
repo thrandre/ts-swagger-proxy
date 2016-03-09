@@ -124,7 +124,7 @@ const moduleEmitters: { [key: number]: (module: IModule, resolve: IResolveModule
 		
 		model.model.properties.forEach(p => {
 			const mod = resolve(p.type);
-			if(mod.model.enum) {
+			if(mod && mod.model.enum) {
 				p.type.type = p.type.type + "Type";
 			}
 		});
