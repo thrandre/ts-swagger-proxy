@@ -118,7 +118,7 @@ namespace Swagger {
 
         private static getModel(name: string, typeDefinition: ISwaggerApiResponseTypeDefinition, data: ISwaggerApiResponse): IModel {
 			return {
-                name,
+                name: typeDefinition.enum ? name + "Enum" : name,
                 properties: this.getModelProperties(typeDefinition.properties, data),
 				enum: typeDefinition.enum
             };

@@ -53,9 +53,9 @@ namespace Emitter {
     export function $model(model: IModel): IUnit {
         if(model.enum) {
 			const getLiteralName = (modelName: string) =>
-				`${ modelName }`;
+				`${ modelName }Enum`;
 			
-			const getEnumName = (modelName: string) => `${ modelName }Enum`;
+			const getEnumName = (modelName: string) => `${ modelName }`;
 				
 			const getLiteral = val => val.split(":")[1];
 			const getKey = val => val.split(":")[0];

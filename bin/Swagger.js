@@ -81,7 +81,7 @@ var Swagger;
             key: "getModel",
             value: function getModel(name, typeDefinition, data) {
                 return {
-                    name: name,
+                    name: typeDefinition.enum ? name + "Enum" : name,
                     properties: this.getModelProperties(typeDefinition.properties, data),
                     enum: typeDefinition.enum
                 };
