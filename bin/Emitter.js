@@ -14,6 +14,10 @@ var _stringify = require("babel-runtime/core-js/json/stringify");
 
 var _stringify2 = _interopRequireDefault(_stringify);
 
+var _typeof2 = require("babel-runtime/helpers/typeof");
+
+var _typeof3 = _interopRequireDefault(_typeof2);
+
 var _Builtins = require("./Builtins");
 
 var _Utils = require("./Utils");
@@ -90,9 +94,29 @@ var Emitter;
     Emitter.$module = $module;
     function $model(model) {
         if (model.enum) {
-            return $block([$str("export type " + model.name + " = " + model.enum.map(function (e) {
-                return "\"" + e + "\"";
-            }).join(" | ") + ";")]);
+            var _ret = function () {
+                var getLiteralName = function getLiteralName(modelName) {
+                    return modelName + "Type";
+                };
+                var getEnumName = function getEnumName(modelName) {
+                    return modelName;
+                };
+                var getLiteral = function getLiteral(val) {
+                    return val.split(":")[1];
+                };
+                var getKey = function getKey(val) {
+                    return val.split(":")[0];
+                };
+                return {
+                    v: $block([$str("export type " + getLiteralName(model.name) + " = " + model.enum.map(function (e) {
+                        return "\"" + getLiteral(e) + "\"";
+                    }).join(" | ") + ";"), $block([$str("const " + getEnumName(model.name) + " = {"), $block(model.enum.map(function (e) {
+                        return $str(getKey(e) + ": \"" + getLiteral(e) + "\" as " + getLiteralName(model.name));
+                    }), 1, "," + newline()), $str("};")])])
+                };
+            }();
+
+            if ((typeof _ret === "undefined" ? "undefined" : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
         }
         return $block([$str("export interface " + model.name + " {"), $block(model.properties.map(function (p) {
             return $str(p.name + ": " + expandTypeInfo(p.type) + ";");

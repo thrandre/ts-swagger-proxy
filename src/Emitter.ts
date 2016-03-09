@@ -52,8 +52,25 @@ namespace Emitter {
 
     export function $model(model: IModel): IUnit {
         if(model.enum) {
+			const getLiteralName = (modelName: string) =>
+				`${ modelName }Type`;
+			
+			const getEnumName = (modelName: string) => modelName;
+				
+			const getLiteral = val => val.split(":")[1];
+			const getKey = val => val.split(":")[0];
+				
 			return $block([
-				$str(`export type ${ model.name } = ${ model.enum.map(e => `"${e}"`).join(" | ") };`)
+				$str(`export type ${ getLiteralName(model.name) } = ${ model.enum.map(e => `"${ getLiteral(e) }"`).join(" | ") };`),
+				$block([
+					$str(`const ${ getEnumName(model.name) } = {`),
+					$block(
+						model.enum.map(e => $str(`${ getKey(e) }: "${ getLiteral(e) }" as ${ getLiteralName(model.name) }`)),
+						1,
+						"," + newline()
+					),
+					$str(`};`)
+				])
 			]);
 		}
 		return $block([
