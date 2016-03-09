@@ -196,7 +196,7 @@ function generateProxy(url: string, outDir: string, preserveUtils: boolean = fal
                 model: m,
                 exports: [
 					{ type: m.name, isArray: false, isCustomType: false },
-					m.enum && { type: m.name + "Enum", isArray: false, isCustomType: false }
+					m.enum && { type: m.name + "Constants", isArray: false, isCustomType: false }
 				]
 				.filter(e => !!e),
                 imports: unique(m.properties.map(p => p.type).filter(t => t.isCustomType), t => t.type)
