@@ -175,9 +175,7 @@ function generateProxy(url, outDir) {
                 path: Path.resolve(getModelDirectory(outDir), m.name + ".ts"),
                 kind: _Metadata.ModuleKind.Model,
                 model: m,
-                exports: [{ type: m.name, isArray: false, isCustomType: false }, m.enum && { type: m.name + "Type", isArray: false, isCustomType: false }].filter(function (e) {
-                    return !!e;
-                }),
+                exports: [{ type: m.name, isArray: false, isCustomType: false }],
                 imports: (0, _Utils.unique)(m.properties.map(function (p) {
                     return p.type;
                 }).filter(function (t) {
