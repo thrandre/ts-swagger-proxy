@@ -273,6 +273,7 @@ function generateProxy(url: string, outDir: string, preserveUtils: boolean = fal
                 imports: moduleGraph
 					.filter(m => m.kind === ModuleKind.Model)
 					.reduce((prev, next) => { prev.concat(next.exports); return prev; }, [])
+					.map(t => createTypeInfo(t.type))
             }
         ]);
 
@@ -282,7 +283,9 @@ function generateProxy(url: string, outDir: string, preserveUtils: boolean = fal
                 path: Path.resolve(getProxyDirectory(outDir), `index.ts`),
                 kind: ModuleKind.Index,
                 exports: [],
-                imports: moduleGraph.filter(m => m.kind === ModuleKind.Proxy).map(m => createTypeInfo(m.name))
+                imports: moduleGraph
+					.filter(m => m.kind === ModuleKind.Proxy)
+					.map(m => createTypeInfo(m.name))
             }
         ]);
 
@@ -303,7 +306,9 @@ function generateProxy(url: string, outDir: string, preserveUtils: boolean = fal
         const moduleOutputs = moduleGraph
 			.filter(m => m.kind !== ModuleKind.Util || !preserveUtils)
 			.map(m => moduleEmitters[m.kind](m, resolver));
-
+			
+		console.log(moduleGraph);
+		
         moduleOutputs.forEach(b => {
 			FS.writeFileSync(b.path, b.content + newline());
         });

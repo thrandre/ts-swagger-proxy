@@ -63,7 +63,7 @@ namespace Emitter {
 			return $block([
 				$str(`export type ${ getLiteralName(model.name) } = ${ model.enum.map(e => `"${ getLiteral(e) }"`).join(" | ") };`),
 				$block([
-					$str(`const ${ getEnumName(model.name) } = {`),
+					$str(`export const ${ getEnumName(model.name) } = {`),
 					$block(
 						model.enum.map(e => $str(`${ getKey(e) }: "${ getLiteral(e) }" as ${ getLiteralName(model.name) }`)),
 						1,
