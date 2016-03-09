@@ -121,12 +121,6 @@ var getModuleResolver = function getModuleResolver(graph) {
 };
 var moduleEmitters = (_moduleEmitters = {}, (0, _defineProperty3.default)(_moduleEmitters, _Metadata.ModuleKind.Model, function (model, resolve) {
     var deps = resolveModuleDependencies(model, resolve);
-    model.model.properties.forEach(function (p) {
-        var mod = resolve(p.type);
-        if (mod && mod.model.enum) {
-            p.type.type = p.type.type + "Type";
-        }
-    });
     return {
         path: model.path,
         content: _Emitter2.default.$module([_Emitter2.default.$block((0, _keys2.default)(deps).map(function (d) {
@@ -181,7 +175,7 @@ function generateProxy(url, outDir) {
                 path: Path.resolve(getModelDirectory(outDir), m.name + ".ts"),
                 kind: _Metadata.ModuleKind.Model,
                 model: m,
-                exports: [{ type: m.name, isArray: false, isCustomType: false }, m.enum && { type: m.name + "Type", isArray: false, isCustomType: false }].filter(function (e) {
+                exports: [{ type: m.name, isArray: false, isCustomType: false }, m.enum && { type: m.name + "Enum", isArray: false, isCustomType: false }].filter(function (e) {
                     return !!e;
                 }),
                 imports: (0, _Utils.unique)(m.properties.map(function (p) {

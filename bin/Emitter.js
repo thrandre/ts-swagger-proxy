@@ -96,10 +96,10 @@ var Emitter;
         if (model.enum) {
             var _ret = function () {
                 var getLiteralName = function getLiteralName(modelName) {
-                    return modelName + "Type";
+                    return "" + modelName;
                 };
                 var getEnumName = function getEnumName(modelName) {
-                    return modelName;
+                    return modelName + "Enum";
                 };
                 var getLiteral = function getLiteral(val) {
                     return val.split(":")[1];

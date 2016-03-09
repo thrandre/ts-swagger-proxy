@@ -122,13 +122,6 @@ const moduleEmitters: { [key: number]: (module: IModule, resolve: IResolveModule
     [ModuleKind.Model]: (model: IModule, resolve: IResolveModule) => {
 		const deps = resolveModuleDependencies(model, resolve);
 		
-		model.model.properties.forEach(p => {
-			const mod = resolve(p.type);
-			if(mod && mod.model.enum) {
-				p.type.type = p.type.type + "Type";
-			}
-		});
-		
 		return {
             path: model.path,
             content: Emitter.$module([
@@ -203,7 +196,7 @@ function generateProxy(url: string, outDir: string, preserveUtils: boolean = fal
                 model: m,
                 exports: [
 					{ type: m.name, isArray: false, isCustomType: false },
-					m.enum && { type: m.name + "Type", isArray: false, isCustomType: false }
+					m.enum && { type: m.name + "Enum", isArray: false, isCustomType: false }
 				]
 				.filter(e => !!e),
                 imports: unique(m.properties.map(p => p.type).filter(t => t.isCustomType), t => t.type)
