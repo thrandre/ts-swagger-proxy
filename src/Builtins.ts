@@ -6,13 +6,6 @@ export const HttpRequestTypeInfo = createTypeInfo("HttpRequest", false, true, tr
 export const HttpResponseTypeInfo = createTypeInfo("HttpResponse", false, true, true);
 export const HttpOptionsTypeInfo = createTypeInfo("HttpOptions", false, true, true);
 export const ConfigureRequestTypeInfo = createTypeInfo("ConfigureRequest", false, true, true);
-export const AssertTypeInfo = createTypeInfo("assert", false, true, true);
-export const CheckTypeInfo = createTypeInfo("check", false, true, true);
-export const IsNumberTypeInfo = createTypeInfo("isNumber", false, true, true);
-export const IsStringTypeInfo = createTypeInfo("isString", false, true, true);
-export const IsBooleanTypeInfo = createTypeInfo("isBoolean", false, true, true);
-export const IsArrayTypeInfo = createTypeInfo("isArray", false, true, true);
-export const HasShapeTypeInfo = createTypeInfo("hasShape", false, true, true);
 
 export const ProxyUtils = 
 `import * as _ from "lodash";

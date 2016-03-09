@@ -13,13 +13,6 @@ import {
     HttpOptionsTypeInfo,
     HttpRequestTypeInfo,
     HttpResponseTypeInfo,
-	AssertTypeInfo,
-	CheckTypeInfo,
-	IsNumberTypeInfo, 
-	IsStringTypeInfo, 
-	IsBooleanTypeInfo,
-	IsArrayTypeInfo,
-	HasShapeTypeInfo, 
     ProxyUtils
 } from "./Builtins";
 
@@ -127,8 +120,16 @@ const getModuleResolver: (graph: IModule[]) => IResolveModule =
 
 const moduleEmitters: { [key: number]: (module: IModule, resolve: IResolveModule) => IModuleOutput } = {
     [ModuleKind.Model]: (model: IModule, resolve: IResolveModule) => {
-        const deps = resolveModuleDependencies(model, resolve)
-        return {
+		const deps = resolveModuleDependencies(model, resolve);
+		
+		model.model.properties.forEach(p => {
+			const mod = resolve(p.type);
+			if(mod.model.enum) {
+				p.type.type = p.type.type + "Type";
+			}
+		});
+		
+		return {
             path: model.path,
             content: Emitter.$module([
                 Emitter.$block(
@@ -202,8 +203,9 @@ function generateProxy(url: string, outDir: string, preserveUtils: boolean = fal
                 model: m,
                 exports: [
 					{ type: m.name, isArray: false, isCustomType: false },
-					{ type: m.name + "Type", isArray: false, isCustomType: false }
-				],
+					m.enum && { type: m.name + "Type", isArray: false, isCustomType: false }
+				]
+				.filter(e => !!e),
                 imports: unique(m.properties.map(p => p.type).filter(t => t.isCustomType), t => t.type)
             }))
             .concat(
@@ -228,14 +230,7 @@ function generateProxy(url: string, outDir: string, preserveUtils: boolean = fal
 					ConfigureRequestTypeInfo,
 					HttpOptionsTypeInfo,
 					HttpRequestTypeInfo,
-					HttpResponseTypeInfo,
-					AssertTypeInfo,
-					CheckTypeInfo,
-					IsNumberTypeInfo, 
-					IsStringTypeInfo, 
-					IsBooleanTypeInfo,
-					IsArrayTypeInfo,
-					HasShapeTypeInfo
+					HttpResponseTypeInfo
 				])
 			}))
             )
@@ -250,14 +245,7 @@ function generateProxy(url: string, outDir: string, preserveUtils: boolean = fal
                         ConfigureRequestTypeInfo,
                         HttpOptionsTypeInfo,
                         HttpRequestTypeInfo,
-                        HttpResponseTypeInfo,
-						AssertTypeInfo,
-						CheckTypeInfo,
-						IsNumberTypeInfo, 
-						IsStringTypeInfo, 
-						IsBooleanTypeInfo,
-						IsArrayTypeInfo,
-						HasShapeTypeInfo
+                        HttpResponseTypeInfo
 					],
 					imports: []
 				}
