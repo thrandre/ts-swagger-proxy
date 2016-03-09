@@ -220,10 +220,8 @@ function generateProxy(url, outDir) {
             imports: moduleGraph.filter(function (m) {
                 return m.kind === _Metadata.ModuleKind.Model;
             }).reduce(function (prev, next) {
-                prev.concat(next.exports);return prev;
-            }, []).map(function (t) {
-                return (0, _Metadata.createTypeInfo)(t.type);
-            })
+                return prev.concat(next.exports);
+            }, [])
         }]);
         moduleGraph = moduleGraph.concat([{
             name: "ProxyIndex",
