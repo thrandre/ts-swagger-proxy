@@ -270,7 +270,9 @@ function generateProxy(url: string, outDir: string, preserveUtils: boolean = fal
                 path: Path.resolve(getModelDirectory(outDir), `index.ts`),
                 kind: ModuleKind.Index,
                 exports: [],
-                imports: moduleGraph.filter(m => m.kind === ModuleKind.Model).map(m => createTypeInfo(m.name))
+                imports: moduleGraph
+					.filter(m => m.kind === ModuleKind.Model)
+					.reduce((prev, next) => { prev.concat(next.exports); return prev; }, [])
             }
         ]);
 
