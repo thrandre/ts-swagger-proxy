@@ -43,10 +43,9 @@ namespace Emitter {
     }
 
     export function $module(children: IUnit[]): IUnit {
-        return () => children
-			.concat([
+        return () => [
 				$str("/* tslint:disable:max-line-length */")
-			])
+			].concat(children)
 			.map(c => c()).filter(c => !!c)
 			.join(newline(2));
     }
