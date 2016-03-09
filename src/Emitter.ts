@@ -109,33 +109,9 @@ namespace Emitter {
 			{}
 		);
 		
-		const getTypeAssertion = (param: IParameter) => {
-			if(param.type.isArray) {
-				return `isArray("${ param.name }", ${ param.name }, ${ !param.required }, "argument", ${ getShape(param.type) })`;
-			}
-			
-			if(param.type.isCustomType) {
-				return `hasShape("${ param.name }", ${ param.name }, ${ !param.required }, "argument", ${ getShape(param.type) })`;
-			}
-			
-			return {
-				number: (name, optional) => `isNumber("${ name }", ${ name }, ${ optional }, "argument")`,
-				string: (name, optional) => `isString("${ name }", ${ name }, ${ optional }, "argument")`,
-				boolean: (name, optional) => `isBoolean("${ name }", ${ name }, ${ optional }, "argument")`
-			}[param.type.type](sanitizeArgumentName(param.name), !param.required);
-		};
-		
-        return $block([
+		return $block([
             $str([prependWith || "", `(${args}): ${transformMethodReturnType(returnType)} {`].join("")),
-            proxyMethod.parameters.length > 0 && $block([
-				$str(`assert(`),
-				$block(
-					proxyMethod.parameters.map(p => $str(getTypeAssertion(p))),
-					level + 2, "," + newline()
-				),
-				$str(`)(m => console.warn(m));`)
-			], level + 1),
-			$block([
+            $block([
                 $str(`const options: ${ HttpOptionsTypeInfo.type } = {`),
                 $block([
                     $str(`actionKey: "${getActionKey(proxyMethod)}"`),

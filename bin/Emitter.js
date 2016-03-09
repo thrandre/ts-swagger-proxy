@@ -162,28 +162,7 @@ var Emitter;
                 return prev;
             }, {}) : {});
         };
-        var getTypeAssertion = function getTypeAssertion(param) {
-            if (param.type.isArray) {
-                return "isArray(\"" + param.name + "\", " + param.name + ", " + !param.required + ", \"argument\", " + getShape(param.type) + ")";
-            }
-            if (param.type.isCustomType) {
-                return "hasShape(\"" + param.name + "\", " + param.name + ", " + !param.required + ", \"argument\", " + getShape(param.type) + ")";
-            }
-            return {
-                number: function number(name, optional) {
-                    return "isNumber(\"" + name + "\", " + name + ", " + optional + ", \"argument\")";
-                },
-                string: function string(name, optional) {
-                    return "isString(\"" + name + "\", " + name + ", " + optional + ", \"argument\")";
-                },
-                boolean: function boolean(name, optional) {
-                    return "isBoolean(\"" + name + "\", " + name + ", " + optional + ", \"argument\")";
-                }
-            }[param.type.type](sanitizeArgumentName(param.name), !param.required);
-        };
-        return $block([$str([prependWith || "", "(" + args + "): " + transformMethodReturnType(returnType) + " {"].join("")), proxyMethod.parameters.length > 0 && $block([$str("assert("), $block(proxyMethod.parameters.map(function (p) {
-            return $str(getTypeAssertion(p));
-        }), level + 2, "," + newline()), $str(")(m => console.warn(m));")], level + 1), $block([$str("const options: " + _Builtins.HttpOptionsTypeInfo.type + " = {"), $block([$str("actionKey: \"" + getActionKey(proxyMethod) + "\""), $str("url: `" + transformUriParamsInPath(path) + "`"), $str("emitPending: true")], level + 2, "," + newline()), $str("};"), needsQueryBuilder && $str("const query = " + getQueryParams(proxyMethod.parameters) + ";"), needsRequestBuilder && $str("const buildRequest: " + _Builtins.ConfigureRequestTypeInfo.type + " = req => req." + [needsQueryBuilder && "query(query)", needsBodyBuilder && "send(" + getBodyParam(proxyMethod.parameters) + ")", ";"].filter(function (p) {
+        return $block([$str([prependWith || "", "(" + args + "): " + transformMethodReturnType(returnType) + " {"].join("")), $block([$str("const options: " + _Builtins.HttpOptionsTypeInfo.type + " = {"), $block([$str("actionKey: \"" + getActionKey(proxyMethod) + "\""), $str("url: `" + transformUriParamsInPath(path) + "`"), $str("emitPending: true")], level + 2, "," + newline()), $str("};"), needsQueryBuilder && $str("const query = " + getQueryParams(proxyMethod.parameters) + ";"), needsRequestBuilder && $str("const buildRequest: " + _Builtins.ConfigureRequestTypeInfo.type + " = req => req." + [needsQueryBuilder && "query(query)", needsBodyBuilder && "send(" + getBodyParam(proxyMethod.parameters) + ")", ";"].filter(function (p) {
             return !!p;
         }).join(""))], level + 1), $block([$str("return api." + mapMethod(proxyMethod.method, returnType) + "(" + ["options", needsRequestBuilder && "buildRequest"].filter(function (a) {
             return !!a;
