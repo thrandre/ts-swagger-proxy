@@ -80,7 +80,7 @@ var Emitter;
     Emitter.$reexport = $reexport;
     function $module(children) {
         return function () {
-            return children.map(function (c) {
+            return children.concat([$str("/* tslint:disable:max-line-length */")]).map(function (c) {
                 return c();
             }).filter(function (c) {
                 return !!c;

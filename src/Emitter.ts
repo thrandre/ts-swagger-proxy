@@ -43,7 +43,12 @@ namespace Emitter {
     }
 
     export function $module(children: IUnit[]): IUnit {
-        return () => children.map(c => c()).filter(c => !!c).join(newline(2));
+        return () => children
+			.concat([
+				$str("/* tslint:disable:max-line-length */")
+			])
+			.map(c => c()).filter(c => !!c)
+			.join(newline(2));
     }
 
     export function $model(model: IModel): IUnit {
