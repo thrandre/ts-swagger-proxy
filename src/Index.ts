@@ -201,7 +201,8 @@ function generateProxy(url: string, outDir: string, preserveUtils: boolean = fal
                 kind: ModuleKind.Model,
                 model: m,
                 exports: [
-					{ type: m.name, isArray: false, isCustomType: false }
+					{ type: m.name, isArray: false, isCustomType: false },
+					{ type: m.name + "Type", isArray: false, isCustomType: false }
 				],
                 imports: unique(m.properties.map(p => p.type).filter(t => t.isCustomType), t => t.type)
             }))
